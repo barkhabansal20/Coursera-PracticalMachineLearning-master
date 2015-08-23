@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title>Practical Machine Learning - Prediction Assignment Writeup</title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="1347.57">
+  <style type="text/css">
+    p.p2 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Helvetica; color: #000000; -webkit-text-stroke: #000000}
+    p.p3 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px Helvetica; color: #000000; -webkit-text-stroke: #000000; min-height: 14.0px}
+    p.p4 {margin: 0.0px 0.0px 12.0px 0.0px; font: 12.0px 'Lucida Console'; color: #000000; -webkit-text-stroke: #000000; background-color: #f8f8f8}
+    p.p5 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Lucida Console'; color: #000000; -webkit-text-stroke: #000000; background-color: #f8f8f8}
+    p.p6 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px 'Lucida Console'; color: #000000; -webkit-text-stroke: #000000}
+    span.s1 {font-kerning: none}
+  </style>
+</head>
+<body>
+<h1 style="margin: 0.0px 0.0px 17.7px 0.0px; font: 26.0px Helvetica; color: #000000; -webkit-text-stroke: #000000"><span class="s1"><b>Practical Machine Learning Project Writeup</b></span></h1>
+<p class="p2"><span class="s1">Following is the analysis for the prediction assignment of the practical machine learning course.The report is kept short and crisp hence the best predictor is shown in the report, other predictors were not as good as the following results hence not included in the report.</span></p>
+<p class="p3"><span class="s1"></span><br></p>
+<p class="p2"><span class="s1">Start with loading packages. (caret, randomForest, Hmisc, foreach &amp; doParallel)<span class="Apple-converted-space"> </span></span></p>
+<p class="p3"><span class="s1"></span><br></p>
+<p class="p2"><span class="s1">Set the seed value for reproducibility.</span></p>
+<p class="p4"><span class="s1">options(warn=-1)</span></p>
+<p class="p5"><span class="s1">library(caret)</span></p>
+<p class="p6"><span class="s1">## Loading required package: lattice</span></p>
+<p class="p6"><span class="s1">## Loading required package: ggplot2</span></p>
+<p class="p5"><span class="s1">library(randomForest)</span></p>
+<p class="p6"><span class="s1">## randomForest 4.6-7</span></p>
+<p class="p6"><span class="s1">## Type rfNews() to see new features/changes/bug fixes.</span></p>
+<p class="p5"><span class="s1">library(Hmisc)</span></p>
+<p class="p6"><span class="s1">## Loading required package: grid</span></p>
+<p class="p6"><span class="s1">## Loading required package: survival</span></p>
+<p class="p6"><span class="s1">## Loading required package: splines</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Attaching package: 'survival'</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## L'objet suivant est masqué from 'package:caret':</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>cluster</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Loading required package: Formula</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Attaching package: 'Hmisc'</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## L'objet suivant est masqué from 'package:randomForest':</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>combine</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Les objets suivants sont masqués from 'package:base':</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>format.pval, round.POSIXt, trunc.POSIXt, units</span></p>
+<p class="p5"><span class="s1">library(foreach)</span></p>
+<p class="p5"><span class="s1">library(doParallel)</span></p>
+<p class="p6"><span class="s1">## Loading required package: iterators</span></p>
+<p class="p6"><span class="s1">## Loading required package: parallel</span></p>
+<p class="p5"><span class="s1">set.seed(4356)</span></p>
+<p class="p2"><span class="s1">Load the csv file data to dataframe and analyze it :</span></p>
+<p class="p4"><span class="s1">data &lt;- read.csv("/projects/Coursera-PracticalMachineLearning/data//pml-training.csv")</span></p>
+<p class="p5"><span class="s1">#summary(data)</span></p>
+<p class="p5"><span class="s1">#describe(data)</span></p>
+<p class="p5"><span class="s1">#sapply(data, class)</span></p>
+<p class="p5"><span class="s1">#str(data)</span></p>
+<p class="p2"><span class="s1">Two problems observed are :</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space"> </span>1 - Some data have characters ("#DIV/0!")</span></p>
+<p class="p2"><span class="s1"><span class="Apple-converted-space"> </span>2 - Some columns have a lot of missing data/value</span></p>
+<p class="p3"><span class="s1"><span class="Apple-converted-space"> </span></span></p>
+<p class="p2"><span class="s1">To manage the first problem, reimport data ignoring "#DIV/0!" values :</span></p>
+<p class="p5"><span class="s1">data &lt;- read.csv("/projects/Coursera-PracticalMachineLearning/data//pml-training.csv", na.strings=c("#DIV/0!") )</span></p>
+<p class="p2"><span class="s1">And force the cast to numeric values for the specified columns (i.e.: 8 to end) :</span></p>
+<p class="p5"><span class="s1">cData &lt;- data</span></p>
+<p class="p5"><span class="s1">for(i in c(8:ncol(cData)-1)) {cData[,i] = as.numeric(as.character(cData[,i]))}</span></p>
+<p class="p3"><span class="s1"></span><br></p>
+<p class="p2"><span class="s1">For second problem, select the column with a 100% completion rate. Also remove less important variables as shown below ( "X"", timestamps, "new_window", "num_window" etc).</span></p>
+<p class="p4"><span class="s1">featuresnames &lt;- colnames(cData[colSums(is.na(cData)) == 0])[-(1:7)]</span></p>
+<p class="p5"><span class="s1">features &lt;- cData[featuresnames]</span></p>
+<p class="p2"><span class="s1">Split the dataset in two part for training and testing.</span></p>
+<p class="p5"><span class="s1">xdata &lt;- createDataPartition(y=features$classe, p=3/4, list=FALSE )</span></p>
+<p class="p5"><span class="s1">training &lt;- features[xdata,]</span></p>
+<p class="p5"><span class="s1">testing &lt;- features[-xdata,]</span></p>
+<p class="p2"><span class="s1">Train a classifier with the training data. Do parallelised processing with the foreach and doParallel package and process 4 random forest with 150 trees each and combine then to have a random forest model with a total of 600 trees.</span></p>
+<p class="p5"><span class="s1">registerDoParallel()</span></p>
+<p class="p5"><span class="s1">model &lt;- foreach(ntree=rep(150, 4), .combine=randomForest::combine) %dopar% randomForest(training[-ncol(training)], training$classe, ntree=ntree)</span></p>
+<p class="p2"><span class="s1">Evaluate the model with the confusionmatrix method (and check accuracy, sensitivity &amp; specificity metrics) :</span></p>
+<p class="p5"><span class="s1">predictionsTr &lt;- predict(model, newdata=training)</span></p>
+<p class="p5"><span class="s1">confusionMatrix(predictionsTr,training$classe)</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Attaching package: 'e1071'</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## L'objet suivant est masqué from 'package:Hmisc':</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>impute</span></p>
+<p class="p6"><span class="s1">## Confusion Matrix and Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">          </span>Reference</span></p>
+<p class="p6"><span class="s1">## Prediction<span class="Apple-converted-space">    </span>A<span class="Apple-converted-space">    </span>B<span class="Apple-converted-space">    </span>C<span class="Apple-converted-space">    </span>D<span class="Apple-converted-space">    </span>E</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>A 4185<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>B<span class="Apple-converted-space">    </span>0 2848<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>C<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 2567<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>D<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 2412<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>E<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0 2706</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Overall Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                 </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                </span>Accuracy : 1<span class="Apple-converted-space">     </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                  </span>95% CI : (1, 1)</span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>No Information Rate : 0.284<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>P-Value [Acc &gt; NIR] : &lt;2e-16</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                 </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">                  </span>Kappa : 1<span class="Apple-converted-space">     </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">  </span>Mcnemar's Test P-Value : NA <span class="Apple-converted-space">   </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Statistics by Class:</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                      </span>Class: A Class: B Class: C Class: D Class: E</span></p>
+<p class="p6"><span class="s1">## Sensitivity <span class="Apple-converted-space">            </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Specificity <span class="Apple-converted-space">            </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Pos Pred Value<span class="Apple-converted-space">          </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Neg Pred Value<span class="Apple-converted-space">          </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Prevalence<span class="Apple-converted-space">              </span>0.284<span class="Apple-converted-space">    </span>0.194<span class="Apple-converted-space">    </span>0.174<span class="Apple-converted-space">    </span>0.164<span class="Apple-converted-space">    </span>0.184</span></p>
+<p class="p6"><span class="s1">## Detection Rate<span class="Apple-converted-space">          </span>0.284<span class="Apple-converted-space">    </span>0.194<span class="Apple-converted-space">    </span>0.174<span class="Apple-converted-space">    </span>0.164<span class="Apple-converted-space">    </span>0.184</span></p>
+<p class="p6"><span class="s1">## Detection Prevalence<span class="Apple-converted-space">    </span>0.284<span class="Apple-converted-space">    </span>0.194<span class="Apple-converted-space">    </span>0.174<span class="Apple-converted-space">    </span>0.164<span class="Apple-converted-space">    </span>0.184</span></p>
+<p class="p6"><span class="s1">## Balanced Accuracy <span class="Apple-converted-space">      </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p5"><span class="s1">predictionsTe &lt;- predict(model, newdata=testing)</span></p>
+<p class="p5"><span class="s1">confusionMatrix(predictionsTe,testing$classe)</span></p>
+<p class="p6"><span class="s1">## Confusion Matrix and Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">          </span>Reference</span></p>
+<p class="p6"><span class="s1">## Prediction<span class="Apple-converted-space">    </span>A<span class="Apple-converted-space">    </span>B<span class="Apple-converted-space">    </span>C<span class="Apple-converted-space">    </span>D<span class="Apple-converted-space">    </span>E</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>A 1395<span class="Apple-converted-space">    </span>1<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>B<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">  </span>946<span class="Apple-converted-space">    </span>6<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>C<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>2<span class="Apple-converted-space">  </span>849<span class="Apple-converted-space">    </span>6<span class="Apple-converted-space">    </span>1</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>D<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">  </span>798<span class="Apple-converted-space">    </span>1</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">          </span>E<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">    </span>0<span class="Apple-converted-space">  </span>899</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Overall Statistics</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                         </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                </span>Accuracy : 0.997<span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                  </span>95% CI : (0.994, 0.998)</span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>No Information Rate : 0.284<span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">    </span>P-Value [Acc &gt; NIR] : &lt;2e-16 <span class="Apple-converted-space">       </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                                         </span></span></p>
+<p class="p6"><span class="s1">## <span class="Apple-converted-space">                  </span>Kappa : 0.996<span class="Apple-converted-space">         </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">  </span>Mcnemar's Test P-Value : NA <span class="Apple-converted-space">           </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">## Statistics by Class:</span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space"> </span></span></p>
+<p class="p6"><span class="s1">##<span class="Apple-converted-space">                      </span>Class: A Class: B Class: C Class: D Class: E</span></p>
+<p class="p6"><span class="s1">## Sensitivity <span class="Apple-converted-space">            </span>1.000<span class="Apple-converted-space">    </span>0.997<span class="Apple-converted-space">    </span>0.993<span class="Apple-converted-space">    </span>0.993<span class="Apple-converted-space">    </span>0.998</span></p>
+<p class="p6"><span class="s1">## Specificity <span class="Apple-converted-space">            </span>1.000<span class="Apple-converted-space">    </span>0.998<span class="Apple-converted-space">    </span>0.998<span class="Apple-converted-space">    </span>1.000<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Pos Pred Value<span class="Apple-converted-space">          </span>0.999<span class="Apple-converted-space">    </span>0.994<span class="Apple-converted-space">    </span>0.990<span class="Apple-converted-space">    </span>0.999<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Neg Pred Value<span class="Apple-converted-space">          </span>1.000<span class="Apple-converted-space">    </span>0.999<span class="Apple-converted-space">    </span>0.999<span class="Apple-converted-space">    </span>0.999<span class="Apple-converted-space">    </span>1.000</span></p>
+<p class="p6"><span class="s1">## Prevalence<span class="Apple-converted-space">              </span>0.284<span class="Apple-converted-space">    </span>0.194<span class="Apple-converted-space">    </span>0.174<span class="Apple-converted-space">    </span>0.164<span class="Apple-converted-space">    </span>0.184</span></p>
+<p class="p6"><span class="s1">## Detection Rate<span class="Apple-converted-space">          </span>0.284<span class="Apple-converted-space">    </span>0.193<span class="Apple-converted-space">    </span>0.173<span class="Apple-converted-space">    </span>0.163<span class="Apple-converted-space">    </span>0.183</span></p>
+<p class="p6"><span class="s1">## Detection Prevalence<span class="Apple-converted-space">    </span>0.285<span class="Apple-converted-space">    </span>0.194<span class="Apple-converted-space">    </span>0.175<span class="Apple-converted-space">    </span>0.163<span class="Apple-converted-space">    </span>0.183</span></p>
+<p class="p6"><span class="s1">## Balanced Accuracy <span class="Apple-converted-space">      </span>1.000<span class="Apple-converted-space">    </span>0.998<span class="Apple-converted-space">    </span>0.995<span class="Apple-converted-space">    </span>0.996<span class="Apple-converted-space">    </span>0.999</span></p>
+<p class="p2"><span class="s1">The confusionmatrix shows that the model is good and efficient because it has an accuracy of 0.997 and very good sensitivity &amp; specificity values on the testing dataset.<span class="Apple-converted-space"> </span></span></p>
+<p class="p2"><span class="s1">Also it is 100% (20/20) correct for the Course Project Submission.</span></p>
+<p class="p3"><span class="s1"></span><br></p>
+</body>
+</html>
